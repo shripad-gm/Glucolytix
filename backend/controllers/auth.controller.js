@@ -4,14 +4,14 @@ import bcrypt from "bcryptjs";
 
 export const signup = async (req, res) => {
 	try {
-		const { fullName, username, email, password } = req.body;
+		const { name,email, password, gender, height, weight, age } = req.body;
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(email)) {
 			return res.status(400).json({ error: "Invalid email format" });
 		}
 
-		const existingUser = await User.findOne({ username });
+		const existingUser = await User.findOne({ name });
 		if (existingUser) {
 			return res.status(400).json({ error: "Username is already taken" });
 		}
@@ -29,8 +29,7 @@ export const signup = async (req, res) => {
 		const hashedPassword = await bcrypt.hash(password, salt);
 
 		const newUser = new User({
-			fullName,
-			username,
+			name,
 			email,
 			password: hashedPassword,
             gender,
@@ -45,9 +44,8 @@ export const signup = async (req, res) => {
 			await newUser.save();
 
 			res.status(201).json({
-				_id: newUser._id,
-				fullName: newUser.fullName,
-				username: newUser.username,
+				_id: newUser._id,	
+				name: newUser.username,
 				email: newUser.email,
                 gender:newUser.gender,
                 height:newUser.height,
@@ -65,8 +63,8 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
 	try {
-		const { username, password } = req.body;
-		const user = await User.findOne({ username });
+		const { name, password } = req.body;
+		const user = await User.findOne({ name });
 		const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
 		if (!user || !isPasswordCorrect) {
@@ -76,14 +74,14 @@ export const login = async (req, res) => {
 		generateTokenAndSetCookie(user._id, res);
 
 		res.status(200).json({
-			_id: newUser._id,
-				fullName: newUser.fullName,
-				username: newUser.username,
-				email: newUser.email,
-                gender:newUser.gender,
-                height:newUser.height,
-                weight:newUser.weight,
-                age:newUser.age
+			_id: user._id,
+				
+				name: user.username,
+				email: user.email,
+                gender:user.gender,
+                height:user.height,
+                weight:user.weight,
+                age:user.age
 		});
 	} catch (error) {
 		console.log("Error in login controller", error.message);

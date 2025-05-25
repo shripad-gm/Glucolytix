@@ -6,9 +6,9 @@ import joblib
 app = Flask(__name__)
 
 client = MongoClient('mongodb://localhost:27017/')
-db = client['diabetes_db']
-users_collection = db["users"]
-diabetes_collection = db["diabetesdatas"]
+db = client['test']
+users_collection = db["User"]
+diabetes_collection = db["Diabetes"]
 
 model = joblib.load('diabetes_model.pkl')
 
@@ -23,26 +23,22 @@ def predict_diabetes(user_id):
         if not diabetes_data:
             return jsonify({"error": "Diabetes data not found for user"}), 404
 
-        # Pull latest glucose value
         glucose_readings = diabetes_data.get("glucoseReadings", [])
         if not glucose_readings:
             return jsonify({"error": "No glucose readings found"}), 404
         latest_glucose = glucose_readings[-1]["value"]
 
-        # User-level fields
-        height = user.get("height")  # cm
-        weight = user.get("weight")  # kg
+        height = user.get("height")
+        weight = user.get("weight")
         age = user.get("age")
-        bmi = weight / ((height / 100) ** 2)  # BMI = kg/m^2
+        bmi = weight / ((height / 100) ** 2)
 
-        # DiabetesData fields
         pregnancies = diabetes_data.get("pregnancies", 0)
         blood_pressure = diabetes_data.get("bloodPressure", 72)
         skin_thickness = diabetes_data.get("skinThickness", 20)
         insulin = diabetes_data.get("insulin", 0)
         diabetes_pedigree_function = diabetes_data.get("diabetesPedigreeFunction", 0.5)
 
-        # Final feature array (match model order!)
         features = [[
             pregnancies,
             latest_glucose,
@@ -53,8 +49,20 @@ def predict_diabetes(user_id):
             diabetes_pedigree_function
         ]]
 
-        # Make prediction
         prediction = model.predict(features)[0]
+        prediction_label = 'diabetic' if prediction == 1 else 'non-diabetic'
+        is_diabetic = prediction == 1
+
+        
+        diabetes_collection.update_one(
+            {"userId": ObjectId(user_id)},
+            {
+                "$set": {
+                    "prediction": prediction_label,
+                    "isDiabetic": is_diabetic
+                }
+            }
+        )
 
         response = {
             "pregnancies": pregnancies,
@@ -64,7 +72,7 @@ def predict_diabetes(user_id):
             "insulin": insulin,
             "bmi": bmi,
             "diabetes_pedigree_function": diabetes_pedigree_function,
-            "prediction": prediction
+            "prediction": prediction_label
         }
 
         return jsonify(response), 200
