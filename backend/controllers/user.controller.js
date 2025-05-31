@@ -16,7 +16,7 @@ export const getUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-    const { username, fullName, email, newpassword,currentPassword, gender, height, weight, age } = req.body;
+   const { name, email, password, gender, height, weight, age } = req.body;
     userid= req.user._id;
     try {
         let user = await User.findById({ _id: userid });
